@@ -1,0 +1,19 @@
+# Secondary 32-bit zygote, based on AOSP init.zygote64_32.rc.
+# Named differently so init.rc's own "start zygote_secondary" never fires it;
+# it only starts when post-fs-data.sh of this module set ksu.zygote32.enable=1.
+# No "onrestart restart zygote": a crashing 32-bit zygote must not take down the 64-bit one.
+service zygote32_ksu /system/bin/app_process32 -Xzygote /system/bin --zygote --socket-name=zygote_secondary --enable-lazy-preload
+    class main
+    disabled
+    priority -20
+    user root
+    group root readproc reserved_disk
+    socket zygote_secondary stream 660 root system
+    socket usap_pool_secondary stream 660 root system
+    task_profiles ProcessCapacityHigh MaxPerformance
+
+on zygote-start && property:ksu.zygote32.enable=1
+    start zygote32_ksu
+
+on property:init.svc.zygote=restarting && property:ksu.zygote32.enable=1
+    restart zygote32_ksu
